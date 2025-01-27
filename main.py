@@ -1,3 +1,4 @@
+import json
 from tkinter import Tk, Canvas, PhotoImage, Button
 import pandas
 import random
@@ -7,16 +8,39 @@ BACKGROUND_COLOR = "#B1DDC6"
 current_index = 0
 next_word = {}
 to_learn = pandas.read_csv("data/german_words.csv").to_dict(orient="records")
-random.shuffle(to_learn)
+try:
+    with open("data/progress.json", encoding="utf-8") as progress_json_file:
+        progress = json.load(progress_json_file)
+except FileNotFoundError:
+    progress = {}
+
+to_learn_with_count = [
+    {'word': word["German"], 'trans': word["English"], 'count': progress.get(word["German"], 0)}
+    for word in to_learn
+]
+
+sorted_to_learn = sorted(
+    to_learn_with_count,
+    key=lambda x: x['count'] + random.uniform(0, 3)
+)
+
+def next_card_known():
+    global progress
+    word = next_word.get("word")
+    progress.update({word: next_word.get("count", 0) + 1})
+    with open("data/progress.json", "w", encoding="utf-8") as progress_json_file:
+        json.dump(progress, progress_json_file)
+
+    next_card()
 
 def next_card():
     global current_index, flip_card_after, next_word
     window.after_cancel(flip_card_after)
 
-    next_word = to_learn[current_index % len(to_learn)]
+    next_word = sorted_to_learn[current_index % len(to_learn)]
     canvas.itemconfig(canvas_image, image=card_front_image)
     canvas.itemconfig(card_title, text="German", fill="black")
-    canvas.itemconfig(card_word, text=next_word["German"], fill="black")
+    canvas.itemconfig(card_word, text=next_word["word"], fill="black")
 
     flip_card_after = window.after(ms=3000, func=flip_card)
 
@@ -25,7 +49,7 @@ def next_card():
 def flip_card():
     canvas.itemconfig(canvas_image, image=card_back_image)
     canvas.itemconfig(card_title, text="English", fill="white")
-    canvas.itemconfig(card_word, text=next_word["English"], fill="white")
+    canvas.itemconfig(card_word, text=next_word["trans"], fill="white")
 
 window = Tk()
 window.title("Flashy")
@@ -45,7 +69,7 @@ cross_button = Button(image=cross_image, highlightthickness=0, border=0, command
 cross_button.grid(row=1, column=0)
 
 tick_image = PhotoImage(file="images/right.png")
-tick_button = Button(image=tick_image, highlightthickness=0, border=0, command=next_card)
+tick_button = Button(image=tick_image, highlightthickness=0, border=0, command=next_card_known)
 tick_button.grid(row=1, column=1)
 
 flip_card_after = window.after(ms=3000, func=flip_card)
