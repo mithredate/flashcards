@@ -5,25 +5,27 @@ import random
 BACKGROUND_COLOR = "#B1DDC6"
 
 current_index = 0
+next_word = {}
 to_learn = pandas.read_csv("data/german_words.csv").to_dict(orient="records")
 random.shuffle(to_learn)
 
 def next_card():
-    global current_index
+    global current_index, flip_card_after, next_word
+    window.after_cancel(flip_card_after)
 
     next_word = to_learn[current_index % len(to_learn)]
     canvas.itemconfig(canvas_image, image=card_front_image)
     canvas.itemconfig(card_title, text="German", fill="black")
     canvas.itemconfig(card_word, text=next_word["German"], fill="black")
 
-    def flip_card():
-        canvas.itemconfig(canvas_image, image=card_back_image)
-        canvas.itemconfig(card_title, text="English", fill="white")
-        canvas.itemconfig(card_word, text=next_word["English"], fill="white")
-    window.after(ms=3000, func=flip_card)
+    flip_card_after = window.after(ms=3000, func=flip_card)
 
     current_index += 1
 
+def flip_card():
+    canvas.itemconfig(canvas_image, image=card_back_image)
+    canvas.itemconfig(card_title, text="English", fill="white")
+    canvas.itemconfig(card_word, text=next_word["English"], fill="white")
 
 window = Tk()
 window.title("Flashy")
@@ -46,7 +48,9 @@ tick_image = PhotoImage(file="images/right.png")
 tick_button = Button(image=tick_image, highlightthickness=0, border=0, command=next_card)
 tick_button.grid(row=1, column=1)
 
+flip_card_after = window.after(ms=3000, func=flip_card)
 next_card()
+
 
 window.mainloop()
 
